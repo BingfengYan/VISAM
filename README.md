@@ -37,7 +37,7 @@ This repository is an official implementation of [MOTRv2](https://arxiv.org/abs/
 |![](https://raw.githubusercontent.com/zyayoung/oss/main/2_ocsort.gif)|![](https://raw.githubusercontent.com/zyayoung/oss/main/2_motrv2.gif)|
 |![](https://raw.githubusercontent.com/zyayoung/oss/main/19_ocsort.gif)|![](https://raw.githubusercontent.com/zyayoung/oss/main/19_motrv2.gif)|
 |![](https://raw.githubusercontent.com/zyayoung/oss/main/1_ocsort.gif)|![](https://raw.githubusercontent.com/zyayoung/oss/main/1_motrv2.gif)|
-|![](https://raw.githubusercontent.com/BingfengYan/MOTSAM/main/tmp.gif)|
+|![](https://raw.githubusercontent.com/BingfengYan/MOTSAM/main/tmp.gif)|![](https://raw.githubusercontent.com/BingfengYan/MOTSAM/main/tmp.gif)|
 
 
 ## Installation
