@@ -4,8 +4,7 @@
 [![PWC](https://img.shields.io/endpoint.svg?url=https://paperswithcode.com/badge/motrv2-bootstrapping-end-to-end-multi-object/multi-object-tracking-on-dancetrack)](https://paperswithcode.com/sota/multi-object-tracking-on-dancetrack?p=motrv2-bootstrapping-end-to-end-multi-object)
 [![PWC](https://img.shields.io/endpoint.svg?url=https://paperswithcode.com/badge/motrv2-bootstrapping-end-to-end-multi-object/multiple-object-tracking-on-bdd100k)](https://paperswithcode.com/sota/multiple-object-tracking-on-bdd100k?p=motrv2-bootstrapping-end-to-end-multi-object)
 
-This repository is an official implementation of [MOTRv2](https://arxiv.org/abs/2211.09791).
-
+This fork from https://github.com/megvii-research/MOTRv2 [MOTRv2](https://arxiv.org/abs/2211.09791), and after we will release our code CO-MOT.
 
 ## Introduction
 
