@@ -28,7 +28,7 @@ from torch.utils.data import Dataset, DataLoader
 
 
 import sys
-sys.path.append('/home/hadoop-vacv/yanfeng/project/MOTRv2/MOTSAM/thirdparty/segment-anything')
+sys.path.append('thirdparty/segment-anything')
 from segment_anything import build_sam, SamPredictor 
 
 class Colors:
@@ -120,12 +120,12 @@ class Detector(object):
         os.makedirs(self.predict_path, exist_ok=True)
 
         
-        self.sam_predictor = SamPredictor(build_sam(checkpoint="/home/hadoop-vacv/yanfeng/project/MOTRv2/MOTSAM/thirdparty/segment-anything/sam_vit_h_4b8939.pth"))
+        self.sam_predictor = SamPredictor(build_sam(checkpoint="thirdparty/segment-anything/sam_vit_h_4b8939.pth"))
         _ = self.sam_predictor.model.to(device='cuda')
         
         fps = 25
         size = (1920, 1080) 
-        self.videowriter = cv2.VideoWriter('tmp.avi', cv2.VideoWriter_fourcc('M','J','P','G'), fps, size)
+        self.videowriter = cv2.VideoWriter('visam.avi', cv2.VideoWriter_fourcc('M','J','P','G'), fps, size)
 
     @staticmethod
     def filter_dt_by_score(dt_instances: Instances, prob_threshold: float) -> Instances:
@@ -145,7 +145,7 @@ class Detector(object):
         total_occlusion_dts = 0
 
         track_instances = None
-        with open(os.path.join(self.args.mot_path, self.args.det_db)) as f:
+        with open(os.path.join(self.args.mot_path, 'DanceTrack', self.args.det_db)) as f:
             det_db = json.load(f)
         loader = DataLoader(ListImgDataset(self.args.mot_path, self.img_list, det_db), 1, num_workers=2)
         lines = []
@@ -177,7 +177,7 @@ class Detector(object):
             masks_all = []
             self.sam_predictor.set_image(ori_img.to(torch.device('cpu')).numpy().copy())
             
-            for bbox, id in zip(bbox_xyxy, identities):
+            for bbox, id in zip(np.array(bbox_xyxy), identities):
                 masks, iou_predictions, low_res_masks = self.sam_predictor.predict(box=bbox)
                 index_max = iou_predictions.argsort()[0]
                 masks = np.concatenate([masks[index_max:(index_max+1)], masks[index_max:(index_max+1)], masks[index_max:(index_max+1)]], axis=0)

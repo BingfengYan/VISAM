@@ -20,4 +20,4 @@
 --append_crowd
 --det_db det_db_motrv2.json
 --use_checkpoint
---mot_path /mnt/dolphinfs/ssd_pool/docker/user/hadoop-vacv/yanfeng/data/
+--mot_path /home/aiot/yanfeng/data
