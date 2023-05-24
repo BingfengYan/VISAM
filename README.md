@@ -1,7 +1,7 @@
 # MOTRv2: Bootstrapping End-to-End Multi-Object Tracking by Pretrained Object Detectors
 
 
-This fork from https://github.com/megvii-research/MOTRv2 [MOTRv2](https://arxiv.org/abs/2211.09791), and after we will release our code CO-MOT.
+This fork from https://github.com/megvii-research/MOTRv2 [MOTRv2](https://arxiv.org/abs/2211.09791), and ![our code CO-MOT](https://github.com/BingfengYan/CO-MOT).
 
 ## Main Results
 
