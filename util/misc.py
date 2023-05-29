@@ -17,7 +17,7 @@ Mostly copy-paste from torchvision references.
 import os
 import subprocess
 import time
-from collections import defaultdict, deque
+from collections import OrderedDict, defaultdict, deque
 import datetime
 import pickle
 from typing import Optional, List
@@ -283,8 +283,11 @@ def mot_collate_fn(batch: List[dict]) -> dict:
     for key in list(batch[0].keys()):
         assert not isinstance(batch[0][key], Tensor)
         ret_dict[key] = [img_info[key] for img_info in batch]
-        if len(ret_dict[key]) == 1:
-            ret_dict[key] = ret_dict[key][0]
+        # if len(ret_dict[key]) == 1:
+        #     ret_dict[key] = ret_dict[key][0]
+        # else:
+        if not isinstance(ret_dict[key], list):
+            ret_dict[key] = list(map(list, zip(*ret_dict[key])))
     return ret_dict
 
 
@@ -504,3 +507,10 @@ def inverse_sigmoid(x, eps=1e-5):
     x2 = (1 - x).clamp(min=eps)
     return torch.log(x1/x2)
 
+def clean_state_dict(state_dict):
+    new_state_dict = OrderedDict()
+    for k, v in state_dict.items():
+        if k[:7] == 'module.':
+            k = k[7:]  # remove `module.`
+        new_state_dict[k] = v
+    return new_state_dict

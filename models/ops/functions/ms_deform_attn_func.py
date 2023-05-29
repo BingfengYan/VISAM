@@ -44,10 +44,10 @@ class MSDeformAttnFunction(Function):
 def ms_deform_attn_core_pytorch(value, value_spatial_shapes, sampling_locations, attention_weights):
     # for debug and test only,
     # need to use cuda version instead
-    N_, S_, M_, D_ = value.shape
-    _, Lq_, M_, L_, P_, _ = sampling_locations.shape
-    value_list = value.split([H_ * W_ for H_, W_ in value_spatial_shapes], dim=1)
-    sampling_grids = 2 * sampling_locations - 1
+    N_, S_, M_, D_ = value.shape   # batch, pixel, multi head, channel
+    _, Lq_, M_, L_, P_, _ = sampling_locations.shape   # batch, pixel, multi head,  n_levels, n_points, 2 
+    value_list = value.split([H_ * W_ for H_, W_ in value_spatial_shapes], dim=1)  # 按level拆分value
+    sampling_grids = 2 * sampling_locations - 1  # [-1,1]
     sampling_value_list = []
     for lid_, (H_, W_) in enumerate(value_spatial_shapes):
         # N_, H_*W_, M_, D_ -> N_, H_*W_, M_*D_ -> N_, M_*D_, H_*W_ -> N_*M_, D_, H_, W_

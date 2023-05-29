@@ -46,13 +46,22 @@ def check_forward_equal_with_pytorch_double():
 
 @torch.no_grad()
 def check_forward_equal_with_pytorch_float():
-    value = torch.rand(N, S, M, D).cuda() * 0.01
-    sampling_locations = torch.rand(N, Lq, M, L, P, 2).cuda()
-    attention_weights = torch.rand(N, Lq, M, L, P).cuda() + 1e-5
+    value = torch.rand(N, S, M, D, requires_grad=True).cuda() * 0.01
+    sampling_locations = torch.rand(N, Lq, M, L, P, 2, requires_grad=True).cuda()
+    attention_weights = torch.rand(N, Lq, M, L, P, requires_grad=True).cuda() + 1e-5
     attention_weights /= attention_weights.sum(-1, keepdim=True).sum(-2, keepdim=True)
     im2col_step = 2
+    
+    value = torch.autograd.Variable(value.data, requires_grad=True)  
+    sampling_locations = torch.autograd.Variable(sampling_locations.data, requires_grad=True)  
+    attention_weights = torch.autograd.Variable(attention_weights.data, requires_grad=True)  
+    
+    t0 = time.time()
+    output_cuda = MSDeformAttnFunction.apply(value, shapes, level_start_index, sampling_locations, attention_weights, im2col_step).cpu()
+    print( time.time()-t0)
+    t0 = time.time()
     output_pytorch = ms_deform_attn_core_pytorch(value, shapes, sampling_locations, attention_weights).detach().cpu()
-    output_cuda = MSDeformAttnFunction.apply(value, shapes, level_start_index, sampling_locations, attention_weights, im2col_step).detach().cpu()
+    print( time.time()-t0)
     fwdok = torch.allclose(output_cuda, output_pytorch, rtol=1e-2, atol=1e-3)
     max_abs_err = (output_cuda - output_pytorch).abs().max()
     max_rel_err = ((output_cuda - output_pytorch).abs() / output_pytorch.abs()).max()

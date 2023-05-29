@@ -40,13 +40,14 @@ class Instances:
           confident_detections = instances[instances.scores > 0.9]
     """
 
-    def __init__(self, image_size: Tuple[int, int], **kwargs: Any):
+    def __init__(self, image_size: Tuple[int, int], data_name='MOT', **kwargs: Any):
         """
         Args:
             image_size (height, width): the spatial size of the image.
             kwargs: fields to add to this `Instances`.
         """
         self._image_size = image_size
+        self._data_name = data_name
         self._fields: Dict[str, Any] = {}
         for k, v in kwargs.items():
             self.set(k, v)
@@ -117,11 +118,22 @@ class Instances:
         Returns:
             Instances: all fields are called with a `to(device)`, if the field has this method.
         """
-        ret = Instances(self._image_size)
+        ret = Instances(self._image_size, data_name=self._data_name)
         for k, v in self._fields.items():
             if hasattr(v, "to"):
                 v = v.to(*args, **kwargs)
             ret.set(k, v)
+        return ret
+    
+    # Tensor-like methods
+    def get_bn(self, index: int) -> "Instances":
+        """
+        Returns:
+            Instances: all fields are called with a `to(device)`, if the field has this method.
+        """
+        ret = Instances(self._image_size, data_name=self._data_name)
+        for k, v in self._fields.items():
+            ret.set(k, v[:, index])
         return ret
 
     def numpy(self):
@@ -188,6 +200,38 @@ class Instances:
                 values = list(itertools.chain(*values))
             elif hasattr(type(v0), "cat"):
                 values = type(v0).cat(values)
+            else:
+                raise ValueError("Unsupported type {} for concatenation".format(type(v0)))
+            ret.set(k, values)
+        return ret
+    
+    @staticmethod
+    def merge(instance_lists: List["Instances"]) -> "Instances":
+        """
+        Args:
+            instance_lists (list[Instances])
+
+        Returns:
+            Instances
+        """
+        assert all(isinstance(i, Instances) for i in instance_lists)
+        assert len(instance_lists) > 0
+        if len(instance_lists) == 1:
+            return instance_lists[0]
+
+        image_size = instance_lists[0].image_size
+        for i in instance_lists[1:]:
+            assert i.image_size == image_size
+        ret = Instances(image_size)
+        for k in instance_lists[0]._fields.keys():
+            values = [(i.get(k))[:, ith:ith+1] for ith, i in enumerate(instance_lists)]
+            v0 = values[0]
+            if isinstance(v0, torch.Tensor):
+                values = torch.hstack(values)
+            # elif isinstance(v0, list):
+            #     values = list(itertools.chain(*values))
+            # elif hasattr(type(v0), "cat"):
+            #     values = type(v0).cat(values)
             else:
                 raise ValueError("Unsupported type {} for concatenation".format(type(v0)))
             ret.set(k, values)

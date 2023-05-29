@@ -7,7 +7,7 @@ python tools/merge_dance_tracklets.py $1 $2
 # python3 ../TrackEval/scripts/run_mot_challenge.py \
 #     --SPLIT_TO_EVAL val  \
 #     --METRICS HOTA \
-#     --GT_FOLDER /data/datasets/DanceTrack/val \
+#     --GT_FOLDER /data/datasets/dancetrack/val \
 #     --SEQMAP_FILE seqmap \
 #     --SKIP_SPLIT_FOL True \
 #     --TRACKER_SUB_FOLDER tracker \

@@ -24,7 +24,7 @@ from util.misc import (nested_tensor_from_tensor_list,
 import copy
 
 
-def sigmoid_focal_loss(inputs, targets, num_boxes, alpha: float = 0.25, gamma: float = 2, mean_in_dim1=True):
+def sigmoid_focal_loss(inputs, targets, num_boxes, alpha: float = 0.25, gamma: float = 2, mean_in_dim1=True, issum=True):
     """
     Loss used in RetinaNet for dense detection: https://arxiv.org/abs/1708.02002.
     Args:
@@ -48,10 +48,13 @@ def sigmoid_focal_loss(inputs, targets, num_boxes, alpha: float = 0.25, gamma: f
     if alpha >= 0:
         alpha_t = alpha * targets + (1 - alpha) * (1 - targets)
         loss = alpha_t * loss
-    if mean_in_dim1:
-        return loss.mean(1).sum() / num_boxes
+    if issum:
+        if mean_in_dim1:
+            return loss.mean(1).sum() / num_boxes
+        else:
+            return loss.sum() / num_boxes
     else:
-        return loss.sum() / num_boxes
+        return loss / num_boxes
 
 
 class SetCriterion(nn.Module):

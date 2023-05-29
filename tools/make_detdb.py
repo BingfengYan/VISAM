@@ -16,7 +16,7 @@ to_cache = []
 for file in glob("/data/Dataset/mot/crowdhuman/train_image/*.txt"):
     to_cache.append(file)
 
-for file in glob("/data/Dataset/mot/DanceTrack/*/*/img1/*.txt"):
+for file in glob("/data/Dataset/mot/dancetrack/*/*/img1/*.txt"):
     to_cache.append(file)
 
 for file in glob("/data/Dataset/mot/MOT17/images/*/*/img1/*.txt"):

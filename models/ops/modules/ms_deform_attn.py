@@ -21,8 +21,8 @@ from torch import nn
 import torch.nn.functional as F
 from torch.nn.init import xavier_uniform_, constant_
 
-from ..functions import MSDeformAttnFunction
-
+from ..functions import MSDeformAttnFunction, ms_deform_attn_core_pytorch
+features_grad=0.0
 
 def _is_power_of_2(n):
     if (not isinstance(n, int)) or (n < 0):
@@ -31,7 +31,7 @@ def _is_power_of_2(n):
 
 
 class MSDeformAttn(nn.Module):
-    def __init__(self, d_model=256, n_levels=4, n_heads=8, n_points=4, sigmoid_attn=False):
+    def __init__(self, d_model=256, n_levels=4, n_heads=8, n_points=4, sigmoid_attn=False, im2col_step=64):
         """
         Multi-Scale Deformable Attention Module
         :param d_model      hidden dimension
@@ -48,7 +48,7 @@ class MSDeformAttn(nn.Module):
             warnings.warn("You'd better set d_model in MSDeformAttn to make the dimension of each attention head a power of 2 "
                           "which is more efficient in our CUDA implementation.")
 
-        self.im2col_step = 64
+        self.im2col_step = im2col_step
         self.sigmoid_attn = sigmoid_attn
 
         self.d_model = d_model
@@ -115,7 +115,16 @@ class MSDeformAttn(nn.Module):
         else:
             raise ValueError(
                 'Last dim of reference_points must be 2 or 4, but get {} instead.'.format(reference_points.shape[-1]))
-        output = MSDeformAttnFunction.apply(
-            value, input_spatial_shapes, input_level_start_index, sampling_locations, attention_weights, self.im2col_step)
+        
+        # def extract(g):
+        #     global features_grad
+        #     features_grad = g
+        # value.requires_grad=True
+        # value.register_hook(extract)
+        sampling_locations = sampling_locations.contiguous()
+        output = MSDeformAttnFunction.apply(value, input_spatial_shapes, input_level_start_index, sampling_locations, attention_weights, self.im2col_step)
+        # output = MSDeformAttnFunction.apply(value.double(), input_spatial_shapes, input_level_start_index, sampling_locations.double(), attention_weights.double(), self.im2col_step).float()
+        # output = ms_deform_attn_core_pytorch(value, input_spatial_shapes, sampling_locations, attention_weights)
+
         output = self.output_proj(output)
         return output

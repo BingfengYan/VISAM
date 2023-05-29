@@ -43,29 +43,8 @@ class DetMOTDetection:
         self.mot_path = args.mot_path
 
         self.labels_full = defaultdict(lambda : defaultdict(list))
-        def add_mot_folder(split_dir):
-            print("Adding", split_dir)
-            for vid in os.listdir(os.path.join(self.mot_path, split_dir)):
-                if 'seqmap' == vid:
-                    continue
-                vid = os.path.join(split_dir, vid)
-                if 'DPM' in vid or 'FRCNN' in vid:
-                    print(f'filter {vid}')
-                    continue
-                gt_path = os.path.join(self.mot_path, vid, 'gt', 'gt.txt')
-                for l in open(gt_path):
-                    t, i, *xywh, mark, label = l.strip().split(',')[:8]
-                    t, i, mark, label = map(int, (t, i, mark, label))
-                    if mark == 0:
-                        continue
-                    if label in [3, 4, 5, 6, 9, 10, 11]:  # Non-person
-                        continue
-                    else:
-                        crowd = False
-                    x, y, w, h = map(float, (xywh))
-                    self.labels_full[vid][t].append([x, y, w, h, i, crowd])
-
-        add_mot_folder("DanceTrack/train")
+       
+        self._add_mot_folder(data_txt_path)
         vid_files = list(self.labels_full.keys())
 
         self.indices = []
@@ -101,6 +80,32 @@ class DetMOTDetection:
         else:
             self.det_db = defaultdict(list)
 
+    def _add_mot_folder(self, split_dir):
+        print("Adding", split_dir)
+        for vid in os.listdir(os.path.join(self.mot_path, split_dir)):
+            if 'seqmap' == vid:
+                continue
+            vid = os.path.join(split_dir, vid)
+            if 'DPM' in vid or 'FRCNN' in vid:
+                print(f'filter {vid}')
+                continue
+            gt_path = os.path.join(self.mot_path, vid, 'gt', 'gt.txt')
+            if not os.path.exists(gt_path):
+                print('YF: %s not exists'%(gt_path))
+                continue
+            for l in open(gt_path):
+                t, i, *xywh, mark, label = l.strip().split(',')[:8]
+                t, i, mark, label = map(int, (t, i, mark, label))
+                if mark == 0:
+                    continue
+                if label in [3, 4, 5, 6, 9, 10, 11]:  # Non-person
+                    continue
+                else:
+                    crowd = False
+                x, y, w, h = map(float, (xywh))
+                self.labels_full[vid][t].append([x, y, w, h, i, crowd])
+
+
     def set_epoch(self, epoch):
         self.current_epoch = epoch
         if self.sampler_steps is None or len(self.sampler_steps) == 0:
@@ -130,15 +135,18 @@ class DetMOTDetection:
     def load_crowd(self, index):
         ID, boxes = self.ch_indices[index]
         boxes = copy.deepcopy(boxes)
-        img = Image.open(self.ch_dir / 'Images' / f'{ID}.jpg')
+        img_path = self.ch_dir / 'Crowdhuman_train' / f'{ID}.jpg'
+        if not os.path.exists(img_path): img_path = self.ch_dir / 'Crowdhuman_val' / f'{ID}.jpg'
+        img = Image.open(img_path)
 
         w, h = img._size
         n_gts = len(boxes)
         scores = [0. for _ in range(len(boxes))]
-        for line in self.det_db[f'crowdhuman/train_image/{ID}.txt']:
-            *box, s = map(float, line.split(','))
-            boxes.append(box)
-            scores.append(s)
+        if f'crowdhuman/train_image/{ID}.txt' in self.det_db:
+            for line in self.det_db[f'crowdhuman/train_image/{ID}.txt']:
+                *box, s = map(float, line.split(','))
+                boxes.append(box)
+                scores.append(s)
         boxes = torch.tensor(boxes, dtype=torch.float32)
         areas = boxes[..., 2:].prod(-1)
         boxes[:, 2:] += boxes[:, :2]
@@ -150,7 +158,7 @@ class DetMOTDetection:
             'iscrowd': torch.zeros((n_gts, ), dtype=torch.bool),
             'image_id': torch.tensor([0]),
             'area': areas,
-            'obj_ids': torch.arange(n_gts),
+            'obj_ids': torch.arange(n_gts, dtype=torch.long),
             'size': torch.as_tensor([h, w]),
             'orig_size': torch.as_tensor([h, w]),
             'dataset': "CrowdHuman",
@@ -183,14 +191,15 @@ class DetMOTDetection:
             targets['obj_ids'].append(id + obj_idx_offset)
             targets['scores'].append(1.)
         txt_key = os.path.join(vid, 'img1', f'{idx:08d}.txt')
-        for line in self.det_db[txt_key]:
-            *box, s = map(float, line.split(','))
-            targets['boxes'].append(box)
-            targets['scores'].append(s)
+        if txt_key.replace('dancetrack/', 'DanceTrack/') in self.det_db:
+            for line in self.det_db[txt_key.replace('dancetrack/', 'DanceTrack/')]:
+                *box, s = map(float, line.split(','))
+                targets['boxes'].append(box)
+                targets['scores'].append(s)
 
         targets['iscrowd'] = torch.as_tensor(targets['iscrowd'])
         targets['labels'] = torch.as_tensor(targets['labels'])
-        targets['obj_ids'] = torch.as_tensor(targets['obj_ids'], dtype=torch.float64)
+        targets['obj_ids'] = torch.as_tensor(targets['obj_ids'], dtype=torch.long)
         targets['scores'] = torch.as_tensor(targets['scores'])
         targets['boxes'] = torch.as_tensor(targets['boxes'], dtype=torch.float32).reshape(-1, 4)
         targets['boxes'][:, 2:] += targets['boxes'][:, :2]
@@ -246,9 +255,41 @@ class DetMOTDetection:
 
 
 class DetMOTDetectionValidation(DetMOTDetection):
-    def __init__(self, args, seqs_folder, transform):
-        args.data_txt_path = args.val_data_txt_path
-        super().__init__(args, seqs_folder, transform)
+    def __init__(self, args, data_txt_path: str, seqs_folder, transform):
+        super().__init__(args, data_txt_path, seqs_folder, transform)
+
+    def __getitem__(self, idx):
+        
+        vid = list(self.vid_tmax.keys())[idx]
+        t_min = min(self.labels_full[vid].keys())
+        t_max = max(self.labels_full[vid].keys()) + 1
+        # indices = range(t_min, t_max)
+        # images, targets = self.pre_continuous_frames(vid, indices)
+
+        # if self.transform is not None:
+        #     images, targets = self.transform(images, targets)
+        # gt_instances, proposals = [], []
+        # for img_i, targets_i in zip(images, targets):
+        #     gt_instances_i = self._targets_to_instances(targets_i, img_i.shape[1:3])
+        #     gt_instances.append(gt_instances_i)
+        #     n_gt = len(targets_i['labels'])
+        #     proposals.append(torch.cat([
+        #         targets_i['boxes'][n_gt:],
+        #         targets_i['scores'][n_gt:, None],
+        #     ], dim=1))
+        # return {
+        #     'imgs': images,
+        #     'gt_instances': gt_instances,
+        #     'proposals': proposals,
+        # }
+        return {
+            'video_name': os.path.join(self.mot_path, vid),
+            'video_min': t_min,
+            'video_max': t_max,
+        }
+
+    def __len__(self):
+        return len(self.vid_tmax)
 
 
 def make_transforms_for_mot17(image_set, args=None):
@@ -300,9 +341,9 @@ def build(image_set, args):
     assert root.exists(), f'provided MOT path {root} does not exist'
     transform = build_transform(args, image_set)
     if image_set == 'train':
-        data_txt_path = args.data_txt_path_train
+        data_txt_path = "dancetrack/train"
         dataset = DetMOTDetection(args, data_txt_path=data_txt_path, seqs_folder=root, transform=transform)
     if image_set == 'val':
-        data_txt_path = args.data_txt_path_val
-        dataset = DetMOTDetection(args, data_txt_path=data_txt_path, seqs_folder=root, transform=transform)
+        data_txt_path = "dancetrack/val"
+        dataset = DetMOTDetectionValidation(args, data_txt_path=data_txt_path, seqs_folder=root, transform=transform)
     return dataset
