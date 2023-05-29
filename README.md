@@ -120,3 +120,4 @@ zip motrv2.zip tracker/ -r
 - [DanceTrack](https://github.com/DanceTrack/DanceTrack)
 - [BDD100K](https://github.com/bdd100k/bdd100k)
 - [MOTRv2](https://github.com/megvii-research/MOTRv2)
+- [CO-MOT](https://github.com/BingfengYan/CO-MOT)
